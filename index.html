@@ -194,7 +194,10 @@
     if (state.items.every(item=>item.width===""&&item.height===""&&item.count==="")) {
       state.items=defaults.items.map(item=>({...item})); state.preset=1;
     }
-    state.preset=findMatchingPreset();
+    if (state.preset===null) {
+      const matchingPreset=findMatchingPreset();
+      if (matchingPreset>=0) state.preset=matchingPreset;
+    }
     let calculationId = 0;
     let debounce;
     let activeWorker = null;
@@ -312,7 +315,8 @@
       }
     }
     function updatePresetSelection() {
-      state.preset=findMatchingPreset();
+      const matchingPreset=findMatchingPreset();
+      if (matchingPreset>=0) state.preset=matchingPreset;
       document.getElementById("preset-summary").textContent=state.preset===null?"프리셋 선택":`프리셋 ${state.preset+1} 변경`;
       document.querySelectorAll(".preset").forEach((button,i)=>button.setAttribute("aria-pressed",String(state.preset===i)));
     }
