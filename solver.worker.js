@@ -1,8 +1,8 @@
 "use strict";
 
-self.onmessage = event => {
+function solvePlacement(data, send) {
   try {
-    const {items, empty} = event.data;
+    const {items, empty} = data;
     const rows = 5, cols = 9, cellsTotal = rows * cols, maskBase = 2 ** 28;
     const emptySet = new Set(empty);
     const emptyAt = Array.from({length:cellsTotal},(_,i)=>emptySet.has(i));
@@ -54,13 +54,13 @@ self.onmessage = event => {
         }
       }
       memo.set(key,total);
-      if (states%500000===0) self.postMessage({type:"progress",states});
+      if (states%500000===0) send({type:"progress",states});
       return total;
     }
 
     const counts=items.map(item=>item.n);
     const total=solve(0,0,counts[0],counts[1],counts[2]);
-    if (total===0n) { self.postMessage({type:"done",total:"0",counts:Array(cellsTotal).fill("0")}); return; }
+    if (total===0n) { send({type:"done",total:"0",counts:Array(cellsTotal).fill("0")}); return; }
 
     const cellCounts=Array(cellsTotal).fill(0n);
     let layer=new Map([[keyFor(0,0,counts[0],counts[1],counts[2]),{pos:0,occ:0,a:counts[0],b:counts[1],c:counts[2],ways:1n}]]);
@@ -87,8 +87,14 @@ self.onmessage = event => {
       }
       layer=nextLayer;
     }
-    self.postMessage({type:"done",total:String(total),counts:cellCounts.map(String)});
+    send({type:"done",total:String(total),counts:cellCounts.map(String)});
   } catch (error) {
-    self.postMessage({type:"error",error:error&&error.message?error.message:String(error)});
+    send({type:"error",error:error&&error.message?error.message:String(error)});
   }
-};
+}
+
+if (typeof WorkerGlobalScope !== "undefined" && globalThis instanceof WorkerGlobalScope) {
+  self.onmessage = event => solvePlacement(event.data, message => self.postMessage(message));
+} else {
+  globalThis.solvePlacement = solvePlacement;
+}

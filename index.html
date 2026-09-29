@@ -154,6 +154,7 @@
       </section>
     </div>
   </main>
+  <script src="./solver.worker.js"></script>
   <script>
     "use strict";
     const ROWS = 5, COLS = 9, STORE_KEY = "puzzle-placement-calculator-v1";
@@ -351,19 +352,22 @@
       }
       result.className=""; result.textContent="가능한 배치를 계산하고 있습니다…";
       try {
-        activeWorker=new Worker("./solver.worker.js");
-        activeWorker.onmessage=event=>{
+        const handleMessage=message=>{
           if(id!==calculationId)return;
-          const message=event.data;
           if(message.type==="progress"){result.textContent=`가능한 배치를 계산하고 있습니다… (${message.states.toLocaleString("ko-KR")}개 상태 확인)`;return;}
-          activeWorker.terminate();activeWorker=null;
+          if(activeWorker){activeWorker.terminate();activeWorker=null;}
           if(message.error){result.className="error";result.textContent=`계산 오류: ${message.error}`;return;}
           const total=BigInt(message.total),counts=message.counts.map(value=>BigInt(value));
           if(total===0n){result.className="error";result.textContent=`배치 불가능: 모든 물건을 겹치지 않게 놓는 방법이 없습니다. · 계산 시간 ${elapsed(startedAt)}`;paintBoard(null,"impossible");}
           else{lastResult={counts,total};result.className="";result.textContent=`가능한 배치 ${total.toLocaleString("ko-KR")}개 · 계산 시간 ${elapsed(startedAt)}`;paintBoard(counts,total);}
         };
-        activeWorker.onerror=event=>{if(id!==calculationId)return;activeWorker.terminate();activeWorker=null;result.className="error";result.textContent=`계산 오류: ${event.message||"계산 작업을 시작하지 못했습니다."}`;};
-        activeWorker.postMessage({items:config.items,empty:state.empty});
+        if(location.protocol==="file:") solvePlacement({items:config.items,empty:state.empty},handleMessage);
+        else {
+          activeWorker=new Worker("./solver.worker.js");
+          activeWorker.onmessage=event=>handleMessage(event.data);
+          activeWorker.onerror=event=>{if(id!==calculationId)return;activeWorker.terminate();activeWorker=null;result.className="error";result.textContent=`계산 오류: ${event.message||"계산 작업을 시작하지 못했습니다."}`;};
+          activeWorker.postMessage({items:config.items,empty:state.empty});
+        }
       } catch(error) { result.className="error";result.textContent=`계산을 시작하지 못했습니다: ${error.message}`; }
     }
     function elapsed(startedAt) { return `${((performance.now()-startedAt)/1000).toFixed(2)}초`; }
