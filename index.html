@@ -42,7 +42,7 @@
     .cell:hover { transform:translateY(-1px); border-color:#89988b; }
     .cell .pct { font-size:clamp(.58rem,1.8vw,.79rem); font-weight:700; color:#fff; text-shadow:0 1px 2px #000,0 0 4px #000; }
     .cell.best { outline:3px solid var(--best-accent); outline-offset:-3px; box-shadow:inset 0 0 0 1px #fff; z-index:1; }
-    .cell.best::after { content:"BEST"; position:absolute; top:3px; left:3px; padding:2px 4px; border:1px solid var(--best-accent); border-radius:4px; background:var(--best-accent); color:var(--best-text); font-size:.54rem; line-height:1.1; font-weight:800; letter-spacing:.04em; box-shadow:0 1px 3px #0003; }
+    .cell.best::after { content:"BEST"; position:absolute; top:0; left:0; padding:2px 4px; border:1px solid var(--best-accent); border-radius:6px 0 4px 0; background:var(--best-accent); color:var(--best-text); font-size:.54rem; line-height:1.1; font-weight:800; letter-spacing:.04em; box-shadow:0 1px 3px #0003; }
     .cell.known-empty { background:#fff0e8; border:2px solid #e9a17f; }
     .cell.known-empty::before,.cell.known-empty::after { content:""; position:absolute; left:50%; top:50%; width:58%; height:7%; border-radius:99px; background:#c45b3c; box-shadow:0 1px 2px #7b302522; }
     .cell.known-empty::before { transform:translate(-50%,-50%) rotate(45deg); }
@@ -73,7 +73,7 @@
       .board { gap:clamp(2px,1vw,5px); }
       .cell { min-width:0; border-radius:5px; }
       .cell .pct { font-size:clamp(.48rem,2.2vw,.72rem); }
-      .cell.best::after { top:2px; left:2px; padding:1px 2px; font-size:clamp(.36rem,1.3vw,.48rem); }
+      .cell.best::after { padding:1px 2px; border-radius:5px 0 3px 0; font-size:clamp(.36rem,1.3vw,.48rem); }
       .themes { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .preset { min-height:40px; }
     }
