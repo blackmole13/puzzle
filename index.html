@@ -372,7 +372,7 @@
       if (counts && total>0n) counts.forEach((count,i)=>{ if(!state.empty.includes(i)&&count>bestCount) bestCount=count; });
       document.querySelectorAll(".cell").forEach((cell,i) => {
         const known=state.empty.includes(i); cell.className="cell"; cell.innerHTML=""; cell.style.backgroundColor=""; cell.style.color=""; cell.style.removeProperty("--best-accent"); cell.style.removeProperty("--best-text");
-        if (total === "impossible") { cell.classList.add("no-solution"); cell.disabled=true; cell.setAttribute("aria-label",`${Math.floor(i/COLS)+1}행 ${i%COLS+1}열, 배치 불가능`); return; }
+        if (total === "impossible") { cell.classList.add("no-solution"); cell.disabled=false; cell.setAttribute("aria-label",`${Math.floor(i/COLS)+1}행 ${i%COLS+1}열, 배치 불가능`); return; }
         if (known) { cell.classList.add("known-empty"); cell.disabled=false; cell.setAttribute("aria-label",`${Math.floor(i/COLS)+1}행 ${i%COLS+1}열, 빈칸 확정`); return; }
         cell.disabled=false;
         if (counts && total>0n) {
