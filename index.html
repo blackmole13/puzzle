@@ -159,6 +159,10 @@
       total:"2662809982",
       counts:["1345906528","1736162439","1898082671","1743802119","1715009916","1743802119","1898082671","1736162439","1345906528","1717703686","1942269114","2002126868","1911224393","1899568007","1911224393","2002126868","1942269114","1717703686","1990322552","2071266813","2000721609","1994953875","2014312626","1994953875","2000721609","2071266813","1990322552","1717703686","1942269114","2002126868","1911224393","1899568007","1911224393","2002126868","1942269114","1717703686","1345906528","1736162439","1898082671","1743802119","1715009916","1743802119","1898082671","1736162439","1345906528"]
     };
+    const preset2Cache = {
+      total:"69964148",
+      counts:["34469966","44259835","50288458","48663328","45708204","48663328","50288458","44259835","34469966","46971733","50202571","51041351","50890648","49840600","50890648","51041351","50202571","46971733","53414136","52499470","51604858","51824906","51952680","51824906","51604858","52499470","53414136","46971733","50202571","51041351","50890648","49840600","50890648","51041351","50202571","46971733","34469966","44259835","50288458","48663328","45708204","48663328","50288458","44259835","34469966"]
+    };
     const defaults = { items:names.map((_,i)=>({width:String(presets[1][i].w),height:String(presets[1][i].h),count:String(presetCounts[1][i])})), empty:[], preset:1, theme:"viridis" };
     let state = loadState();
     if (state.items.every(item=>item.width===""&&item.height===""&&item.count==="")) {
@@ -307,8 +311,9 @@
       if (config.pending) { result.className=""; result.textContent="물건 크기와 개수를 입력하면 계산합니다."; return; }
       if (config.error) { result.className="error"; result.textContent=config.error; return; }
       if (config.impossible) { result.className="error"; result.textContent=`배치 불가능: 물건의 전체 넓이가 남은 칸보다 큽니다. · 계산 시간 ${elapsed(startedAt)}`; paintBoard(null,"impossible"); return; }
-      if (state.preset===0 && state.empty.length===0) {
-        const total=BigInt(preset1Cache.total),counts=preset1Cache.counts.map(value=>BigInt(value));
+      if ((state.preset===0||state.preset===1) && state.empty.length===0) {
+        const cache=state.preset===0?preset1Cache:preset2Cache;
+        const total=BigInt(cache.total),counts=cache.counts.map(value=>BigInt(value));
         lastResult={counts,total};result.className="";result.textContent=`가능한 배치 ${total.toLocaleString("ko-KR")}개 · 사전 계산 결과 (불러오기 ${elapsed(startedAt)})`;paintBoard(counts,total);return;
       }
       result.className=""; result.textContent="가능한 배치를 계산하고 있습니다…";
