@@ -358,7 +358,7 @@
     }
     document.getElementById("reset").addEventListener("click", () => {
       if (!confirm("빈칸 표시를 지우고 프리셋 2로 되돌릴까요?")) return;
-      calculationId++; clearTimeout(debounce); state=structuredClone(defaults);
+      calculationId++; clearTimeout(debounce); const theme=state.theme; state=structuredClone(defaults); state.theme=theme;
       state.items=state.items.map((item,i)=>({...item,width:String(presets[1][i].w),height:String(presets[1][i].h),count:String(presetCounts[1][i])}));state.preset=1;
       saveState(); buildControls(); buildThemeControls(); calculate();
     });
