@@ -22,11 +22,16 @@
     .panel { background:var(--paper); border:1px solid #e1e0d9; border-radius:16px; padding:20px; box-shadow:0 4px 18px #26291d08; }
     h2 { margin:0 0 15px; font-size:1.05rem; }
     .items { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
-    .presets { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 13px; }
-    .preset { border:1px solid var(--line); border-radius:999px; padding:7px 12px; background:#fff; color:var(--ink); cursor:pointer; font-size:.85rem; }
+    .preset-menu { margin:0 0 10px; }
+    .preset-menu summary { display:flex; align-items:center; justify-content:space-between; min-height:36px; padding:0 2px; color:var(--muted); font-size:.82rem; font-weight:650; cursor:pointer; list-style:none; }
+    .preset-menu summary::-webkit-details-marker { display:none; }
+    .preset-menu summary::after { content:"▾"; color:var(--muted); transition:transform .12s ease; }
+    .preset-menu[open] summary::after { transform:rotate(180deg); }
+    .presets { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; padding-top:5px; }
+    .preset { min-width:0; border:1px solid var(--line); border-radius:8px; padding:7px 8px; background:#fff; color:var(--ink); cursor:pointer; font-size:.76rem; white-space:nowrap; }
     .preset[aria-pressed="true"] { background:var(--green); border-color:var(--green); color:#fff; }
-    .item { display:grid; grid-template-columns:1fr; gap:9px; align-content:start; padding:12px; border:1px solid var(--line); border-radius:12px; }
-    .item-controls { display:grid; grid-template-columns:minmax(0,1fr) 124px; gap:8px; }
+    .item { display:grid; grid-template-columns:1fr; gap:7px; align-content:start; padding:10px; border:1px solid var(--line); border-radius:12px; }
+    .item-controls { display:grid; grid-template-columns:88px 124px; gap:8px; }
     .item-title { font-weight:650; }
     .item-title small { display:block; margin-top:2px; color:var(--muted); font-size:.75rem; font-weight:450; }
     label { color:var(--muted); font-size:.73rem; }
@@ -75,8 +80,8 @@
       header { align-items:center; margin-bottom:12px; }
       .layout { grid-template-columns:minmax(0,1.15fr) minmax(410px,.85fr); gap:14px; }
       .panel { padding:16px; }
-      .items { grid-template-columns:1fr; gap:8px; }
-      .item { gap:6px; padding:9px 11px; }
+      .items { grid-template-columns:1fr; gap:7px; }
+      .item { gap:5px; padding:8px 10px; }
       .board { gap:6px; }
       #result { margin-bottom:8px; }
       .legend { margin-top:8px; }
@@ -104,8 +109,8 @@
       main { width:calc(100% - 20px); margin:12px auto; }
       header { align-items:start; }
       .panel { padding:11px; }
-      .item { gap:7px; padding:9px 10px; }
-      .item-controls { grid-template-columns:minmax(0,1fr) 124px; }
+      .item { gap:5px; padding:8px 9px; }
+      .item-controls { grid-template-columns:88px 124px; }
       input[type=number],select { min-height:42px; padding:7px 4px; }
       .reset { padding:7px 9px; font-size:.85rem; }
       .options-toggle { padding:7px 9px; font-size:.78rem; }
@@ -119,7 +124,7 @@
       .board { gap:2px; }
       .cell .pct { font-size:.46rem; }
       .presets { gap:5px; }
-      .preset { padding:6px 8px; font-size:.78rem; }
+      .preset { padding:6px 5px; font-size:.7rem; }
     }
     @media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none!important; } }
   </style>
@@ -153,7 +158,10 @@
       </section>
       <section class="panel" aria-labelledby="settings-title">
         <h2 id="settings-title">물건 설정</h2>
-        <div class="presets" id="presets" role="group" aria-label="물건 크기 프리셋"></div>
+        <details class="preset-menu" id="preset-menu">
+          <summary id="preset-summary">프리셋 변경</summary>
+          <div class="presets" id="presets" role="group" aria-label="물건 크기 프리셋"></div>
+        </details>
         <div class="items" id="items"></div>
         <p class="hint">크기는 프리셋에 등록된 선택지에서 고를 수 있습니다. 90° 회전 배치를 함께 계산합니다.</p>
       </section>
@@ -254,13 +262,14 @@
     }
     function buildControls() {
       const presetHost=document.getElementById("presets"); presetHost.replaceChildren();
+      document.getElementById("preset-summary").textContent=state.preset===null?"프리셋 선택":`프리셋 ${state.preset+1} 변경`;
       presets.forEach((sizes,i) => {
         const button=document.createElement("button"); button.type="button"; button.className="preset"; button.setAttribute("aria-pressed",String(state.preset===i));
-        button.textContent=`프리셋 ${i+1} · ${sizes.map(size=>`${size.w}×${size.h}`).join(" / ")} · ${presetCounts[i].join("/")}`;
+        button.textContent=`${i+1} · ${sizes.map(size=>`${size.w}×${size.h}`).join("/")}`;
         button.addEventListener("click",()=>{
           state.preset=i;
           state.items=state.items.map((item,j)=>({...item,width:String(sizes[j].w),height:String(sizes[j].h),count:String(presetCounts[i][j])}));
-          saveState(); buildControls(); scheduleCalculation();
+          document.getElementById("preset-menu").open=false; saveState(); buildControls(); scheduleCalculation();
         });
         presetHost.append(button);
       });
@@ -319,6 +328,7 @@
     }
     function updatePresetSelection() {
       state.preset=findMatchingPreset();
+      document.getElementById("preset-summary").textContent=state.preset===null?"프리셋 선택":`프리셋 ${state.preset+1} 변경`;
       document.querySelectorAll(".preset").forEach((button,i)=>button.setAttribute("aria-pressed",String(state.preset===i)));
     }
     function getConfig() {
@@ -399,6 +409,7 @@
       if (!confirm("빈칸 표시를 지우고 프리셋 2로 되돌릴까요?")) return;
       calculationId++; clearTimeout(debounce); const theme=state.theme; state=structuredClone(defaults); state.theme=theme;
       state.items=state.items.map((item,i)=>({...item,width:String(presets[1][i].w),height:String(presets[1][i].h),count:String(presetCounts[1][i])}));state.preset=1;
+      document.getElementById("preset-menu").open=false;
       saveState(); buildControls(); buildThemeControls(); calculate();
     });
     document.getElementById("theme-toggle").addEventListener("click",event=>{
