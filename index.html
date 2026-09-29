@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f3ed">
+  <title>배치 확률 계산기</title>
+  <style>
+    :root { color-scheme: light; --ink:#20231f; --muted:#6e736b; --line:#d9dcd3; --paper:#fbfaf6; --green:#244c3a; --red:#d94c45; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:#f1efe8; color:var(--ink); font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+    main { width:min(1060px,100% - 32px); margin:36px auto; }
+    header { display:flex; justify-content:space-between; align-items:end; gap:20px; margin-bottom:22px; }
+    h1 { margin:0; font-size:clamp(1.65rem,4vw,2.35rem); letter-spacing:-.045em; }
+    .intro { margin:7px 0 0; color:var(--muted); font-size:.94rem; }
+    button { font:inherit; }
+    .reset { border:1px solid var(--line); border-radius:10px; padding:9px 13px; background:var(--paper); color:var(--ink); cursor:pointer; white-space:nowrap; }
+    .reset:hover { border-color:#8d9589; }
+    .layout { display:grid; grid-template-columns:1fr; gap:18px; align-items:start; }
+    .panel { background:var(--paper); border:1px solid #e1e0d9; border-radius:16px; padding:20px; box-shadow:0 4px 18px #26291d08; }
+    h2 { margin:0 0 15px; font-size:1.05rem; }
+    .items { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .presets { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 13px; }
+    .preset { border:1px solid var(--line); border-radius:999px; padding:7px 12px; background:#fff; color:var(--ink); cursor:pointer; font-size:.85rem; }
+    .preset[aria-pressed="true"] { background:var(--green); border-color:var(--green); color:#fff; }
+    .item { display:grid; grid-template-columns:1fr; gap:9px; align-content:start; padding:12px; border:1px solid var(--line); border-radius:12px; }
+    .item-controls { display:grid; grid-template-columns:minmax(0,1fr) 68px; gap:8px; }
+    .item-title { font-weight:650; }
+    .item-title small { display:block; margin-top:2px; color:var(--muted); font-size:.75rem; font-weight:450; }
+    label { color:var(--muted); font-size:.73rem; }
+    .field { display:grid; gap:4px; }
+    input[type=number], select { width:100%; min-width:0; border:1px solid #cfd3c9; border-radius:8px; padding:8px 7px; background:#fff; color:var(--ink); font:inherit; font-size:.94rem; }
+    input:focus-visible,select:focus-visible,button:focus-visible { outline:3px solid #72a28a; outline-offset:2px; }
+    .hint { margin:12px 0 0; color:var(--muted); font-size:.8rem; line-height:1.5; }
+    .grid-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+    .grid-head h2 { margin-bottom:5px; }
+    #result { min-height:1.5em; margin:2px 0 13px; color:var(--muted); font-size:.88rem; }
+    #result.error { color:#a32e2a; font-weight:650; }
+    .board-wrap { overflow-x:auto; padding:3px 0 6px; }
+    .board { display:grid; grid-template-columns:repeat(9,minmax(0,1fr)); gap:8px; width:min(100%,900px); min-width:420px; }
+    .cell { aspect-ratio:1; position:relative; display:grid; place-items:center; border:1px solid #d8dcd3; border-radius:7px; background:#f3f4ef; color:#57312c; cursor:pointer; padding:0; transition:background-color .12s ease,transform .12s ease; }
+    .cell:hover { transform:translateY(-1px); border-color:#89988b; }
+    .cell .pct { font-size:clamp(.58rem,1.8vw,.79rem); font-weight:700; color:#fff; text-shadow:0 1px 2px #000,0 0 4px #000; }
+    .cell.best { outline:3px solid var(--best-accent); outline-offset:-3px; box-shadow:inset 0 0 0 1px #fff; z-index:1; }
+    .cell.best::after { content:"BEST"; position:absolute; top:3px; left:3px; padding:2px 4px; border:1px solid var(--best-accent); border-radius:4px; background:var(--best-accent); color:var(--best-text); font-size:.54rem; line-height:1.1; font-weight:800; letter-spacing:.04em; box-shadow:0 1px 3px #0003; }
+    .cell.known-empty { background:#fff0e8; border:2px solid #e9a17f; }
+    .cell.known-empty::before,.cell.known-empty::after { content:""; position:absolute; left:50%; top:50%; width:58%; height:7%; border-radius:99px; background:#c45b3c; box-shadow:0 1px 2px #7b302522; }
+    .cell.known-empty::before { transform:translate(-50%,-50%) rotate(45deg); }
+    .cell.known-empty::after { transform:translate(-50%,-50%) rotate(-45deg); }
+    .cell.no-solution { background:#fff0ee; border-color:#e7b1ab; cursor:pointer; }
+    .cell:disabled { cursor:default; }
+    .cell:disabled:hover { transform:none; }
+    .legend { display:flex; align-items:center; gap:9px; margin-top:13px; color:var(--muted); font-size:.76rem; }
+    .gradient { width:140px; height:10px; border-radius:99px; background:linear-gradient(90deg,#440154 0%,#3b528b 25%,#21918c 50%,#5ec962 75%,#fde725 100%); border:1px solid #c8c9b8; }
+    .theme-settings { margin-top:15px; }
+    .options-toggle { border:1px solid var(--line); border-radius:9px; padding:7px 11px; background:#fff; color:var(--ink); cursor:pointer; font-size:.84rem; }
+    .options-toggle:hover { border-color:#8d9589; }
+    .theme-label { margin:16px 0 7px; color:var(--muted); font-size:.78rem; font-weight:650; }
+    .themes { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+    .theme-option { min-width:0; display:grid; gap:6px; padding:8px; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); cursor:pointer; text-align:left; }
+    .theme-option[aria-pressed="true"] { border:2px solid var(--green); padding:7px; box-shadow:0 0 0 2px #244c3a18; }
+    .theme-swatch { width:100%; height:9px; border-radius:99px; }
+    .theme-name { overflow:hidden; text-overflow:ellipsis; font-size:.76rem; font-weight:650; white-space:nowrap; }
+    .saved { color:var(--muted); font-size:.75rem; margin:11px 0 0; }
+    footer { margin:18px 3px; color:var(--muted); font-size:.78rem; line-height:1.6; }
+    @media(max-width:700px) { main { margin:22px auto; } .panel { padding:16px; } .board { min-width:390px; gap:6px; } .themes { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:660px) { .items { grid-template-columns:1fr; } }
+    @media(max-width:440px) { .item { gap:7px; padding:9px 10px; } .item-controls { grid-template-columns:minmax(0,1fr) 76px; } input[type=number],select { padding:7px 4px; } header { align-items:start; } }
+    @media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none!important; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>배치 확률 계산기</h1>
+        <p class="intro">물건을 겹치지 않게 놓았을 때, 각 칸이 차지될 가능성을 살펴보세요.</p>
+      </div>
+      <button class="reset" id="reset" type="button">초기화</button>
+    </header>
+    <div class="layout">
+      <section class="panel" aria-labelledby="board-title">
+        <div class="grid-head"><h2 id="board-title">5×9 격자</h2></div>
+        <p id="result" aria-live="polite">물건 크기와 개수를 입력하면 계산합니다.</p>
+        <div class="board-wrap"><div class="board" id="board" role="grid" aria-label="5행 9열 배치 격자"></div></div>
+        <div class="legend"><span>0%</span><span class="gradient" aria-hidden="true"></span><span>100% 차지 확률</span></div>
+        <div class="theme-settings">
+          <button class="options-toggle" id="theme-toggle" type="button" aria-expanded="false" aria-controls="theme-panel">⚙ 옵션</button>
+          <div id="theme-panel" hidden>
+            <p class="theme-label">색상 테마</p>
+            <div class="themes" id="themes" role="group" aria-label="색상 테마 선택"></div>
+          </div>
+        </div>
+        <p class="hint">칸을 클릭하면 빈칸으로 지정하거나 해제합니다. 빈칸 조건에 따라 확률이 다시 계산됩니다.</p>
+        <p class="saved" id="saved">이 브라우저에 자동 저장됩니다.</p>
+      </section>
+      <section class="panel" aria-labelledby="settings-title">
+        <h2 id="settings-title">물건 설정</h2>
+        <div class="presets" id="presets" role="group" aria-label="물건 크기 프리셋"></div>
+        <div class="items" id="items"></div>
+        <p class="hint">크기는 프리셋에 등록된 선택지에서 고를 수 있습니다. 90° 회전 배치를 함께 계산합니다.</p>
+      </section>
+    </div>
+    <footer>확률은 조건을 만족하는 서로 다른 완성 배치를 같은 비중으로 계산합니다. 배치가 불가능하면 격자에 그 상태를 표시합니다.</footer>
+  </main>
+  <script>
+    "use strict";
+    const ROWS = 5, COLS = 9, STORE_KEY = "puzzle-placement-calculator-v1";
+    const names = ["물건 1", "물건 2", "물건 3"];
+    const presets = [
+      [{w:3,h:2},{w:3,h:1},{w:1,h:2}],
+      [{w:4,h:2},{w:1,h:4},{w:3,h:1}],
+      [{w:3,h:3},{w:2,h:2},{w:1,h:2}]
+    ];
+    const presetCounts = [[2,5,2],[0,0,0],[0,0,0]];
+    const themes = {
+      viridis:{name:"Viridis",gradient:"linear-gradient(90deg,#440154,#3b528b,#21918c,#5ec962,#fde725)",stops:[[0,[68,1,84]],[.25,[59,82,139]],[.5,[33,145,140]],[.75,[94,201,98]],[1,[253,231,37]]],best:{bg:"#440154",fg:"#ffffff"}},
+      plasma:{name:"Plasma",gradient:"linear-gradient(90deg,#0d0887,#7e03a8,#cc4778,#f89540,#f0f921)",stops:[[0,[13,8,135]],[.25,[126,3,168]],[.5,[204,71,120]],[.75,[248,149,64]],[1,[240,249,33]]],best:{bg:"#0d0887",fg:"#ffffff"}},
+      ylgnbu:{name:"YlGnBu",gradient:"linear-gradient(90deg,#ffffd9,#c7e9b4,#41b6c4,#225ea8,#081d58)",stops:[[0,[255,255,217]],[.25,[199,233,180]],[.5,[65,182,196]],[.75,[34,94,168]],[1,[8,29,88]]],best:{bg:"#ffb000",fg:"#17233d"}},
+      rose:{name:"Rose",gradient:"linear-gradient(90deg,#fff1f2,#fda4af,#f43f5e,#be123c,#4c0519)",stops:[[0,[255,241,242]],[.25,[253,164,175]],[.5,[244,63,94]],[.75,[190,18,60]],[1,[76,5,25]]],best:{bg:"#52e0c4",fg:"#173e39"}},
+    };
+    const preset1Cache = {
+      total:"2662809982",
+      counts:["1345906528","1736162439","1898082671","1743802119","1715009916","1743802119","1898082671","1736162439","1345906528","1717703686","1942269114","2002126868","1911224393","1899568007","1911224393","2002126868","1942269114","1717703686","1990322552","2071266813","2000721609","1994953875","2014312626","1994953875","2000721609","2071266813","1990322552","1717703686","1942269114","2002126868","1911224393","1899568007","1911224393","2002126868","1942269114","1717703686","1345906528","1736162439","1898082671","1743802119","1715009916","1743802119","1898082671","1736162439","1345906528"]
+    };
+    const defaults = { items: names.map(() => ({ width:"", height:"", count:"" })), empty:[], preset:null, theme:"viridis" };
+    let state = loadState();
+    state.preset=findMatchingPreset();
+    let calculationId = 0;
+    let debounce;
+    let activeWorker = null;
+    let lastResult = null;
+
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+        if (!saved || !Array.isArray(saved.items) || !Array.isArray(saved.empty)) return structuredClone(defaults);
+        return { items:names.map((_,i) => {
+          const v = saved.items[i] || {};
+          let width=cleanValue(v.width), height=cleanValue(v.height);
+          if (width!=="" && !sizesForType(i).some(size=>size.w===Number(width)&&size.h===Number(height))) { width=""; height=""; }
+          return { width, height, count:cleanValue(v.count) };
+        }), empty:saved.empty.filter(n => Number.isInteger(n) && n >= 0 && n < ROWS*COLS), preset:Number.isInteger(saved.preset)&&saved.preset>=0&&saved.preset<presets.length?saved.preset:null, theme:Object.hasOwn(themes,saved.theme)?saved.theme:"viridis" };
+      } catch { return structuredClone(defaults); }
+    }
+    function cleanValue(v) { return v === "" || v === null || v === undefined ? "" : String(v); }
+    function sizesForType(typeIndex) {
+      const seen=new Set(), sizes=[];
+      for (const preset of presets) {
+        const size=preset[typeIndex], key=`${size.w}x${size.h}`;
+        if (!seen.has(key)) { seen.add(key); sizes.push(size); }
+      }
+      return sizes;
+    }
+    function findMatchingPreset() {
+      const match=presets.findIndex((sizes,presetIndex)=>state.items.every((item,i)=>item.width===String(sizes[i].w)&&item.height===String(sizes[i].h)&&item.count===String(presetCounts[presetIndex][i])));
+      return match<0?null:match;
+    }
+    function saveState() {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); document.getElementById("saved").textContent = "현재 상태가 이 브라우저에 저장되었습니다."; }
+      catch { document.getElementById("saved").textContent = "브라우저 저장 공간을 사용할 수 없습니다."; }
+    }
+    function buildThemeControls() {
+      const host=document.getElementById("themes"); host.replaceChildren();
+      for (const [key,theme] of Object.entries(themes)) {
+        const button=document.createElement("button"); button.type="button"; button.className="theme-option"; button.setAttribute("aria-pressed",String(state.theme===key));
+        const swatch=document.createElement("span"); swatch.className="theme-swatch"; swatch.style.backgroundImage=theme.gradient;
+        const label=document.createElement("span"); label.className="theme-name"; label.textContent=theme.name;
+        button.append(swatch,label);
+        button.addEventListener("click",()=>{ state.theme=key; saveState(); buildThemeControls(); document.querySelector(".gradient").style.backgroundImage=theme.gradient; if(lastResult)paintBoard(lastResult.counts,lastResult.total); });
+        host.append(button);
+      }
+      document.querySelector(".gradient").style.backgroundImage=themes[state.theme].gradient;
+    }
+    function buildControls() {
+      const presetHost=document.getElementById("presets"); presetHost.replaceChildren();
+      presets.forEach((sizes,i) => {
+        const button=document.createElement("button"); button.type="button"; button.className="preset"; button.setAttribute("aria-pressed",String(state.preset===i));
+        button.textContent=`프리셋 ${i+1} · ${sizes.map(size=>`${size.w}×${size.h}`).join(" / ")}`;
+        button.addEventListener("click",()=>{
+          state.preset=i;
+          state.items=state.items.map((item,j)=>({...item,width:String(sizes[j].w),height:String(sizes[j].h),count:String(presetCounts[i][j])}));
+          saveState(); buildControls(); scheduleCalculation();
+        });
+        presetHost.append(button);
+      });
+      const host = document.getElementById("items");
+      host.replaceChildren();
+      state.items.forEach((item,i) => {
+        const row = document.createElement("div"); row.className = "item";
+        const title = document.createElement("div"); title.className = "item-title"; title.textContent = names[i];
+        row.append(title);
+        const controls=document.createElement("div"); controls.className="item-controls";
+        const sizeWrap=document.createElement("div"); sizeWrap.className="field";
+        const sizeLabel=document.createElement("label"); sizeLabel.textContent="크기";
+        const sizeSelect=document.createElement("select"); sizeSelect.setAttribute("aria-label",`${names[i]} 크기`);
+        const placeholder=document.createElement("option"); placeholder.value=""; placeholder.textContent="선택"; sizeSelect.append(placeholder);
+        for (const size of sizesForType(i)) {
+          const option=document.createElement("option"); option.value=`${size.w}x${size.h}`; option.textContent=`${size.w}×${size.h}`; sizeSelect.append(option);
+        }
+        sizeSelect.value=item.width&&item.height?`${item.width}x${item.height}`:"";
+        sizeSelect.addEventListener("change",()=>{
+          const [width,height]=sizeSelect.value?sizeSelect.value.split("x"): ["",""];
+          state.items[i].width=width; state.items[i].height=height;
+          updatePresetSelection();
+          saveState(); scheduleCalculation();
+        });
+        sizeWrap.append(sizeLabel,sizeSelect); controls.append(sizeWrap);
+        const countWrap=document.createElement("div"); countWrap.className="field";
+        const countLabel=document.createElement("label"); countLabel.textContent="개수";
+        const countInput=document.createElement("input"); countInput.type="number"; countInput.min="0"; countInput.max="45"; countInput.step="1"; countInput.inputMode="numeric"; countInput.value=item.count; countInput.setAttribute("aria-label",`${names[i]} 개수`);
+        countInput.addEventListener("input",()=>{ state.items[i].count=countInput.value; updatePresetSelection(); saveState(); scheduleCalculation(); });
+        countWrap.append(countLabel,countInput); controls.append(countWrap); row.append(controls);
+        host.append(row);
+      });
+    }
+    function buildBoard() {
+      const host = document.getElementById("board"); host.replaceChildren();
+      for (let i=0;i<ROWS*COLS;i++) {
+        const cell = document.createElement("button"); cell.type = "button"; cell.className = "cell"; cell.dataset.index = String(i);
+        cell.setAttribute("role","gridcell"); cell.setAttribute("aria-label",`${Math.floor(i/COLS)+1}행 ${i%COLS+1}열, 미지정`);
+        cell.addEventListener("click", () => {
+          const set = new Set(state.empty); if (set.has(i)) set.delete(i); else set.add(i);
+          state.empty = [...set].sort((a,b)=>a-b); saveState(); scheduleCalculation();
+        });
+        host.append(cell);
+      }
+    }
+    function updatePresetSelection() {
+      state.preset=findMatchingPreset();
+      document.querySelectorAll(".preset").forEach((button,i)=>button.setAttribute("aria-pressed",String(state.preset===i)));
+    }
+    function getConfig() {
+      const result = [];
+      for (let i=0;i<3;i++) {
+        const {width,height,count} = state.items[i];
+        if (width === "" || height === "" || count === "") return {pending:true};
+        const w=Number(width), h=Number(height), n=Number(count);
+        if (!Number.isInteger(w)||!Number.isInteger(h)||!Number.isInteger(n)||w<1||h<1||w>4||h>4||n<0||n>45||w*h>9) return {error:`${names[i]}의 크기 또는 개수를 확인하세요. (각 변 1~4, 넓이 최대 9)`};
+        result.push({w,h,n});
+      }
+      const occupied = result.reduce((sum,v)=>sum+v.w*v.h*v.n,0);
+      if (occupied > ROWS*COLS-state.empty.length) return {impossible:true};
+      return {items:result};
+    }
+    function scheduleCalculation() { clearTimeout(debounce); if(activeWorker){activeWorker.terminate();activeWorker=null;} calculationId++; debounce=setTimeout(calculate,180); }
+    function calculate() {
+      if(activeWorker){activeWorker.terminate();activeWorker=null;}
+      const id=++calculationId, startedAt=performance.now(), config=getConfig();
+      lastResult=null;
+      const result=document.getElementById("result");
+      paintBoard(null, null);
+      if (config.pending) { result.className=""; result.textContent="물건 크기와 개수를 입력하면 계산합니다."; return; }
+      if (config.error) { result.className="error"; result.textContent=config.error; return; }
+      if (config.impossible) { result.className="error"; result.textContent=`배치 불가능: 물건의 전체 넓이가 남은 칸보다 큽니다. · 계산 시간 ${elapsed(startedAt)}`; paintBoard(null,"impossible"); return; }
+      if (state.preset===0 && state.empty.length===0) {
+        const total=BigInt(preset1Cache.total),counts=preset1Cache.counts.map(value=>BigInt(value));
+        lastResult={counts,total};result.className="";result.textContent=`가능한 배치 ${total.toLocaleString("ko-KR")}개 · 사전 계산 결과 (불러오기 ${elapsed(startedAt)})`;paintBoard(counts,total);return;
+      }
+      result.className=""; result.textContent="가능한 배치를 계산하고 있습니다…";
+      try {
+        activeWorker=new Worker("./solver.worker.js");
+        activeWorker.onmessage=event=>{
+          if(id!==calculationId)return;
+          const message=event.data;
+          if(message.type==="progress"){result.textContent=`가능한 배치를 계산하고 있습니다… (${message.states.toLocaleString("ko-KR")}개 상태 확인)`;return;}
+          activeWorker.terminate();activeWorker=null;
+          if(message.error){result.className="error";result.textContent=`계산 오류: ${message.error}`;return;}
+          const total=BigInt(message.total),counts=message.counts.map(value=>BigInt(value));
+          if(total===0n){result.className="error";result.textContent=`배치 불가능: 모든 물건을 겹치지 않게 놓는 방법이 없습니다. · 계산 시간 ${elapsed(startedAt)}`;paintBoard(null,"impossible");}
+          else{lastResult={counts,total};result.className="";result.textContent=`가능한 배치 ${total.toLocaleString("ko-KR")}개 · 계산 시간 ${elapsed(startedAt)}`;paintBoard(counts,total);}
+        };
+        activeWorker.onerror=event=>{if(id!==calculationId)return;activeWorker.terminate();activeWorker=null;result.className="error";result.textContent=`계산 오류: ${event.message||"계산 작업을 시작하지 못했습니다."}`;};
+        activeWorker.postMessage({items:config.items,empty:state.empty});
+      } catch(error) { result.className="error";result.textContent=`계산을 시작하지 못했습니다: ${error.message}`; }
+    }
+    function elapsed(startedAt) { return `${((performance.now()-startedAt)/1000).toFixed(2)}초`; }
+    function paintBoard(counts,total) {
+      let bestCount=0n;
+      if (counts && total>0n) counts.forEach((count,i)=>{ if(!state.empty.includes(i)&&count>bestCount) bestCount=count; });
+      document.querySelectorAll(".cell").forEach((cell,i) => {
+        const known=state.empty.includes(i); cell.className="cell"; cell.innerHTML=""; cell.style.backgroundColor=""; cell.style.color=""; cell.style.removeProperty("--best-accent"); cell.style.removeProperty("--best-text");
+        if (total === "impossible") { cell.classList.add("no-solution"); cell.disabled=true; cell.setAttribute("aria-label",`${Math.floor(i/COLS)+1}행 ${i%COLS+1}열, 배치 불가능`); return; }
+        if (known) { cell.classList.add("known-empty"); cell.disabled=false; cell.setAttribute("aria-label",`${Math.floor(i/COLS)+1}행 ${i%COLS+1}열, 빈칸 확정`); return; }
+        cell.disabled=false;
+        if (counts && total>0n) {
+          const percent=Number(counts[i]*10000n/total)/100;
+          cell.style.backgroundColor=probabilityColor(Number(counts[i]*10000n/total)/10000);
+          const isBest=bestCount>0n&&!state.empty.includes(i)&&counts[i]===bestCount;
+          if(isBest) { cell.classList.add("best"); cell.style.setProperty("--best-accent",themes[state.theme].best.bg); cell.style.setProperty("--best-text",themes[state.theme].best.fg); }
+          const label=document.createElement("span"); label.className="pct"; label.textContent=`${percent.toFixed(2)}%`; cell.append(label);
+          cell.setAttribute("aria-label",`${Math.floor(i/COLS)+1}행 ${i%COLS+1}열, 점유 확률 ${percent.toFixed(2)}%${isBest?", 최고 확률 BEST":""}`);
+        } else { cell.style.backgroundColor=""; cell.style.color=""; cell.setAttribute("aria-label",`${Math.floor(i/COLS)+1}행 ${i%COLS+1}열, 미지정`); }
+      });
+    }
+    function probabilityColor(percent) {
+      const stops=themes[state.theme].stops;
+      const value=Math.max(0,Math.min(1,percent));
+      let index=stops.findIndex((stop,i)=>i<stops.length-1&&value>=stop[0]&&value<=stops[i+1][0]);
+      if(index<0) index=stops.length-2;
+      const [startColor,startRgb]=stops[index], [endColor,endRgb]=stops[index+1], blend=(value-startColor)/(endColor-startColor);
+      const rgb=startRgb.map((channel,i)=>Math.round(channel+(endRgb[i]-channel)*blend));
+      return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    }
+    document.getElementById("reset").addEventListener("click", () => {
+      if (!confirm("빈칸 표시를 지우고 프리셋 1로 되돌릴까요?")) return;
+      calculationId++; clearTimeout(debounce); state=structuredClone(defaults);
+      state.items=state.items.map((item,i)=>({...item,width:String(presets[0][i].w),height:String(presets[0][i].h),count:String(presetCounts[0][i])}));state.preset=0;
+      saveState(); buildControls(); buildThemeControls(); calculate();
+    });
+    document.getElementById("theme-toggle").addEventListener("click",event=>{
+      const panel=document.getElementById("theme-panel"),open=event.currentTarget.getAttribute("aria-expanded")==="true";
+      event.currentTarget.setAttribute("aria-expanded",String(!open));panel.hidden=open;
+    });
+    buildControls(); buildBoard(); buildThemeControls(); calculate();
+  </script>
+</body>
+</html>
