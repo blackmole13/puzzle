@@ -391,7 +391,7 @@
       return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
     }
     document.getElementById("reset").addEventListener("click", () => {
-      const presetIndex=state.preset??defaults.preset;
+      const presetIndex=state.preset??0;
       if (!confirm(`빈칸 표시를 지우고 프리셋 ${presetIndex+1}로 초기화할까요?`)) return;
       calculationId++; clearTimeout(debounce); const theme=state.theme; state=structuredClone(defaults); state.theme=theme;
       state.items=state.items.map((item,i)=>({...item,width:String(presets[presetIndex][i].w),height:String(presets[presetIndex][i].h),count:String(presetCounts[presetIndex][i])}));state.preset=presetIndex;
