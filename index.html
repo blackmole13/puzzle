@@ -159,8 +159,11 @@
       total:"2662809982",
       counts:["1345906528","1736162439","1898082671","1743802119","1715009916","1743802119","1898082671","1736162439","1345906528","1717703686","1942269114","2002126868","1911224393","1899568007","1911224393","2002126868","1942269114","1717703686","1990322552","2071266813","2000721609","1994953875","2014312626","1994953875","2000721609","2071266813","1990322552","1717703686","1942269114","2002126868","1911224393","1899568007","1911224393","2002126868","1942269114","1717703686","1345906528","1736162439","1898082671","1743802119","1715009916","1743802119","1898082671","1736162439","1345906528"]
     };
-    const defaults = { items: names.map(() => ({ width:"", height:"", count:"" })), empty:[], preset:null, theme:"viridis" };
+    const defaults = { items:names.map((_,i)=>({width:String(presets[1][i].w),height:String(presets[1][i].h),count:String(presetCounts[1][i])})), empty:[], preset:1, theme:"viridis" };
     let state = loadState();
+    if (state.items.every(item=>item.width===""&&item.height===""&&item.count==="")) {
+      state.items=defaults.items.map(item=>({...item})); state.preset=1;
+    }
     state.preset=findMatchingPreset();
     let calculationId = 0;
     let debounce;
@@ -354,9 +357,9 @@
       return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
     }
     document.getElementById("reset").addEventListener("click", () => {
-      if (!confirm("빈칸 표시를 지우고 프리셋 1로 되돌릴까요?")) return;
+      if (!confirm("빈칸 표시를 지우고 프리셋 2로 되돌릴까요?")) return;
       calculationId++; clearTimeout(debounce); state=structuredClone(defaults);
-      state.items=state.items.map((item,i)=>({...item,width:String(presets[0][i].w),height:String(presets[0][i].h),count:String(presetCounts[0][i])}));state.preset=0;
+      state.items=state.items.map((item,i)=>({...item,width:String(presets[1][i].w),height:String(presets[1][i].h),count:String(presetCounts[1][i])}));state.preset=1;
       saveState(); buildControls(); buildThemeControls(); calculate();
     });
     document.getElementById("theme-toggle").addEventListener("click",event=>{
