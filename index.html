@@ -196,7 +196,7 @@
     }
     if (state.preset===null) {
       const matchingPreset=findMatchingPreset();
-      if (matchingPreset>=0) state.preset=matchingPreset;
+      state.preset=matchingPreset!==null?matchingPreset:findPresetBySizes();
     }
     let calculationId = 0;
     let debounce;
@@ -231,6 +231,10 @@
     }
     function findMatchingPreset() {
       const match=presets.findIndex((sizes,presetIndex)=>state.items.every((item,i)=>item.width===String(sizes[i].w)&&item.height===String(sizes[i].h)&&item.count===String(presetCounts[presetIndex][i])));
+      return match<0?null:match;
+    }
+    function findPresetBySizes() {
+      const match=presets.findIndex(sizes=>state.items.every((item,i)=>item.width===String(sizes[i].w)&&item.height===String(sizes[i].h)));
       return match<0?null:match;
     }
     function saveState() {
@@ -316,7 +320,8 @@
     }
     function updatePresetSelection() {
       const matchingPreset=findMatchingPreset();
-      if (matchingPreset>=0) state.preset=matchingPreset;
+      if (matchingPreset!==null) state.preset=matchingPreset;
+      else if (state.preset===null) state.preset=findPresetBySizes();
       document.getElementById("preset-summary").textContent=state.preset===null?"프리셋 선택":`프리셋 ${state.preset+1} 변경`;
       document.querySelectorAll(".preset").forEach((button,i)=>button.setAttribute("aria-pressed",String(state.preset===i)));
     }
@@ -344,7 +349,7 @@
       if (config.error) { result.className="error"; result.textContent=config.error; return; }
       if (config.impossible) { result.className="error"; result.textContent=`배치 불가능: 물건의 전체 넓이가 남은 칸보다 큽니다. · 계산 시간 ${elapsed(startedAt)}`; paintBoard(null,"impossible"); return; }
       const matchingPreset=findMatchingPreset();
-      if (matchingPreset>=0 && state.empty.length===0) {
+      if (matchingPreset!==null && state.empty.length===0) {
         const cache=presetCaches[matchingPreset];
         const total=BigInt(cache.total),counts=cache.counts.map(value=>BigInt(value));
         lastResult={counts,total};result.className="";result.textContent=`가능한 배치 ${total.toLocaleString("ko-KR")}개 · 사전 계산 결과 (불러오기 ${elapsed(startedAt)})`;paintBoard(counts,total);return;
@@ -395,7 +400,7 @@
       return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
     }
     document.getElementById("reset").addEventListener("click", () => {
-      const presetIndex=state.preset??0;
+      const presetIndex=state.preset??findPresetBySizes()??0;
       if (!confirm(`빈칸 표시를 지우고 프리셋 ${presetIndex+1}로 초기화할까요?`)) return;
       calculationId++; clearTimeout(debounce); const theme=state.theme; state=structuredClone(defaults); state.theme=theme;
       state.items=state.items.map((item,i)=>({...item,width:String(presets[presetIndex][i].w),height:String(presets[presetIndex][i].h),count:String(presetCounts[presetIndex][i])}));state.preset=presetIndex;
